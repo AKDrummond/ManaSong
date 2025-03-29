@@ -3,175 +3,185 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>RPG Tile Match-3 Game</title>
+  <title>Tile Match 3 RPG</title>
   <style>
     body {
       margin: 0;
-      font-family: Arial, sans-serif;
+      font-family: sans-serif;
       background-color: #1e1e2f;
-      color: #fff;
+      color: white;
       text-align: center;
     }
     h1 {
-      margin: 10px;
+      margin-top: 20px;
     }
     #score {
-      margin-bottom: 20px;
+      margin: 10px 0;
     }
     #gameBoard {
       display: grid;
       grid-template-columns: repeat(8, 50px);
-      grid-template-rows: repeat(8, 50px);
       gap: 2px;
-      margin: 0 auto;
-      width: fit-content;
+      justify-content: center;
     }
     .tile {
       width: 50px;
       height: 50px;
       border-radius: 4px;
-      transition: transform 0.2s ease;
+      background-color: gray;
     }
-    .tile.match {
+    .match {
       animation: pop 0.3s ease forwards;
     }
     @keyframes pop {
       0% { transform: scale(1); }
-      50% { transform: scale(1.3); }
+      50% { transform: scale(1.2); }
       100% { transform: scale(0); }
     }
   </style>
 </head>
 <body>
-  <h1>RPG Match 3</h1>
+  <h1>Tile Match 3 RPG</h1>
   <div id="score">Score: 0</div>
   <div id="gameBoard"></div>
+
   <script>
-    const board = document.getElementById("gameBoard");
-    const scoreDisplay = document.getElementById("score");
     const width = 8;
     const tileColors = ["red", "blue", "green", "yellow", "purple"];
-    const tiles = [];
+    let board = [];
     let score = 0;
+    const boardEl = document.getElementById("gameBoard");
+    const scoreEl = document.getElementById("score");
 
     function randomColor() {
       return tileColors[Math.floor(Math.random() * tileColors.length)];
     }
 
-    function hasMatch(index, color) {
-      if (index % width > 1 && tiles[index - 1]?.style.backgroundColor === color && tiles[index - 2]?.style.backgroundColor === color) return true;
-      if (index >= width * 2 && tiles[index - width]?.style.backgroundColor === color && tiles[index - width * 2]?.style.backgroundColor === color) return true;
-      return false;
+    function createTile(index, color) {
+      const tile = document.createElement("div");
+      tile.classList.add("tile");
+      tile.dataset.index = index;
+      tile.style.backgroundColor = color;
+      return tile;
     }
 
-    function createBoard() {
-      for (let i = 0; i < width * width; i++) {
-        const tile = document.createElement("div");
-        tile.setAttribute("draggable", true);
-        tile.setAttribute("id", i);
-        let color;
-        do {
-          color = randomColor();
-        } while (hasMatch(i, color));
-        tile.style.backgroundColor = color;
-        tile.classList.add("tile");
-        board.appendChild(tile);
-        tiles.push(tile);
-      }
-      addDragListeners();
-    }
-
-    function addDragListeners() {
-      tiles.forEach(tile => {
-        tile.addEventListener('dragstart', dragStart);
-        tile.addEventListener('dragover', e => e.preventDefault());
-        tile.addEventListener('drop', dragDrop);
-        tile.addEventListener('dragend', dragEnd);
-      });
-    }
-
-    let colorBeingDragged, colorBeingReplaced, tileIdBeingDragged, tileIdBeingReplaced;
-
-    function dragStart() {
-      colorBeingDragged = this.style.backgroundColor;
-      tileIdBeingDragged = parseInt(this.id);
-    }
-
-    function dragDrop() {
-      colorBeingReplaced = this.style.backgroundColor;
-      tileIdBeingReplaced = parseInt(this.id);
-      tiles[tileIdBeingDragged].style.backgroundColor = colorBeingReplaced;
-      tiles[tileIdBeingReplaced].style.backgroundColor = colorBeingDragged;
-    }
-
-    function dragEnd() {
-      let validMoves = [
-        tileIdBeingDragged - 1,
-        tileIdBeingDragged + 1,
-        tileIdBeingDragged - width,
-        tileIdBeingDragged + width
-      ];
-      let validMove = validMoves.includes(tileIdBeingReplaced);
-
-      if (tileIdBeingReplaced && validMove) {
-        checkMatches();
-      } else {
-        tiles[tileIdBeingDragged].style.backgroundColor = colorBeingDragged;
-        tiles[tileIdBeingReplaced].style.backgroundColor = colorBeingReplaced;
-      }
-    }
-
-    function checkMatches() {
-      let matchFound = false;
-
-      for (let i = 0; i < width * width; i++) {
-        if (i % width < width - 2) {
-          let match = [i, i+1, i+2];
-          let firstColor = tiles[i].style.backgroundColor;
-          if (firstColor && match.every(idx => tiles[idx].style.backgroundColor === firstColor)) {
-            match.forEach(idx => tiles[idx].style.backgroundColor = "");
-            score += 10;
-            matchFound = true;
-          }
-        }
-        if (i < width * (width - 2)) {
-          let match = [i, i+width, i+width*2];
-          let firstColor = tiles[i].style.backgroundColor;
-          if (firstColor && match.every(idx => tiles[idx].style.backgroundColor === firstColor)) {
-            match.forEach(idx => tiles[idx].style.backgroundColor = "");
-            score += 10;
-            matchFound = true;
-          }
-        }
-      }
-
-      if (matchFound) scoreDisplay.textContent = `Score: ${score}`;
-    }
-
-    function moveDown() {
-      for (let i = width * (width - 2); i >= 0; i--) {
-        if (tiles[i].style.backgroundColor && tiles[i + width].style.backgroundColor === "") {
-          tiles[i + width].style.backgroundColor = tiles[i].style.backgroundColor;
-          tiles[i].style.backgroundColor = "";
-        }
-      }
-      for (let i = 0; i < width; i++) {
-        if (tiles[i].style.backgroundColor === "") {
+    function initializeBoard() {
+      do {
+        board = [];
+        boardEl.innerHTML = "";
+        for (let i = 0; i < width * width; i++) {
           let color;
           do {
             color = randomColor();
-          } while (hasMatch(i, color));
-          tiles[i].style.backgroundColor = color;
+          } while (wouldFormMatch(i, color));
+          const tile = createTile(i, color);
+          board.push(tile);
+          boardEl.appendChild(tile);
+        }
+      } while (findMatches().length > 0);
+    }
+
+    function getTile(index) {
+      return board[index];
+    }
+
+    function swapTiles(i1, i2) {
+      const tempColor = getTile(i1).style.backgroundColor;
+      getTile(i1).style.backgroundColor = getTile(i2).style.backgroundColor;
+      getTile(i2).style.backgroundColor = tempColor;
+    }
+
+    function wouldFormMatch(index, color) {
+      const row = Math.floor(index / width);
+      const col = index % width;
+      // check left 2
+      if (col >= 2 &&
+          board[index - 1]?.style.backgroundColor === color &&
+          board[index - 2]?.style.backgroundColor === color) return true;
+      // check up 2
+      if (row >= 2 &&
+          board[index - width]?.style.backgroundColor === color &&
+          board[index - width * 2]?.style.backgroundColor === color) return true;
+      return false;
+    }
+
+    function findMatches() {
+      const matches = [];
+      for (let i = 0; i < board.length; i++) {
+        const color = board[i].style.backgroundColor;
+        if (!color) continue;
+        // horizontal
+        if (i % width < width - 2) {
+          if (
+            color === board[i+1].style.backgroundColor &&
+            color === board[i+2].style.backgroundColor
+          ) {
+            matches.push(i, i+1, i+2);
+          }
+        }
+        // vertical
+        if (i < width * (width - 2)) {
+          if (
+            color === board[i+width].style.backgroundColor &&
+            color === board[i+width*2].style.backgroundColor
+          ) {
+            matches.push(i, i+width, i+width*2);
+          }
+        }
+      }
+      return [...new Set(matches)];
+    }
+
+    function removeMatches(matches) {
+      matches.forEach(i => {
+        board[i].classList.add("match");
+        board[i].style.backgroundColor = "";
+      });
+      score += matches.length * 10;
+      scoreEl.textContent = `Score: ${score}`;
+    }
+
+    function collapseBoard() {
+      for (let col = 0; col < width; col++) {
+        for (let row = width - 1; row >= 0; row--) {
+          let i = row * width + col;
+          if (board[i].style.backgroundColor === "") {
+            let aboveRow = row - 1;
+            while (aboveRow >= 0) {
+              let aboveIndex = aboveRow * width + col;
+              if (board[aboveIndex].style.backgroundColor !== "") {
+                board[i].style.backgroundColor = board[aboveIndex].style.backgroundColor;
+                board[aboveIndex].style.backgroundColor = "";
+                break;
+              }
+              aboveRow--;
+            }
+          }
         }
       }
     }
 
-    setInterval(() => {
-      checkMatches();
-      moveDown();
-    }, 500);
+    function fillEmptyTiles() {
+      for (let i = 0; i < board.length; i++) {
+        if (board[i].style.backgroundColor === "") {
+          board[i].style.backgroundColor = randomColor();
+        }
+      }
+    }
 
-    createBoard();
+    function gameTick() {
+      const matches = findMatches();
+      if (matches.length > 0) {
+        removeMatches(matches);
+        setTimeout(() => {
+          collapseBoard();
+          fillEmptyTiles();
+        }, 200);
+      }
+    }
+
+    setInterval(gameTick, 400);
+    initializeBoard();
   </script>
 </body>
 </html>
