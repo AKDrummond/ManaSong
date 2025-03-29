@@ -54,18 +54,36 @@
     const tiles = [];
     let score = 0;
 
+    function randomColor() {
+      return tileColors[Math.floor(Math.random() * tileColors.length)];
+    }
+
+    function hasMatch(index, color) {
+      // Check left 2
+      if (index % width > 1 &&
+          tiles[index - 1]?.style.backgroundColor === color &&
+          tiles[index - 2]?.style.backgroundColor === color) return true;
+      // Check up 2
+      if (index >= width * 2 &&
+          tiles[index - width]?.style.backgroundColor === color &&
+          tiles[index - width * 2]?.style.backgroundColor === color) return true;
+      return false;
+    }
+
     function createBoard() {
       for (let i = 0; i < width * width; i++) {
         const tile = document.createElement("div");
         tile.setAttribute("draggable", true);
         tile.setAttribute("id", i);
-        let color = tileColors[Math.floor(Math.random() * tileColors.length)];
+        let color;
+        do {
+          color = randomColor();
+        } while (hasMatch(i, color));
         tile.style.backgroundColor = color;
         tile.classList.add("tile");
         board.appendChild(tile);
         tiles.push(tile);
       }
-
       addDragListeners();
     }
 
@@ -156,7 +174,11 @@
       }
       for (let i = 0; i < width; i++) {
         if (tiles[i].style.backgroundColor === "") {
-          tiles[i].style.backgroundColor = tileColors[Math.floor(Math.random() * tileColors.length)];
+          let color;
+          do {
+            color = randomColor();
+          } while (hasMatch(i, color));
+          tiles[i].style.backgroundColor = color;
         }
       }
     }
