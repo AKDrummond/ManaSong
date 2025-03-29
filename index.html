@@ -59,14 +59,8 @@
     }
 
     function hasMatch(index, color) {
-      // Check left 2
-      if (index % width > 1 &&
-          tiles[index - 1]?.style.backgroundColor === color &&
-          tiles[index - 2]?.style.backgroundColor === color) return true;
-      // Check up 2
-      if (index >= width * 2 &&
-          tiles[index - width]?.style.backgroundColor === color &&
-          tiles[index - width * 2]?.style.backgroundColor === color) return true;
+      if (index % width > 1 && tiles[index - 1]?.style.backgroundColor === color && tiles[index - 2]?.style.backgroundColor === color) return true;
+      if (index >= width * 2 && tiles[index - width]?.style.backgroundColor === color && tiles[index - width * 2]?.style.backgroundColor === color) return true;
       return false;
     }
 
@@ -131,45 +125,34 @@
       let matchFound = false;
 
       for (let i = 0; i < width * width; i++) {
-        // Horizontal match
         if (i % width < width - 2) {
           let match = [i, i+1, i+2];
           let firstColor = tiles[i].style.backgroundColor;
           if (firstColor && match.every(idx => tiles[idx].style.backgroundColor === firstColor)) {
-            match.forEach(idx => {
-              tiles[idx].classList.add("match");
-              tiles[idx].style.backgroundColor = "";
-            });
+            match.forEach(idx => tiles[idx].style.backgroundColor = "");
             score += 10;
             matchFound = true;
           }
         }
-
-        // Vertical match
         if (i < width * (width - 2)) {
           let match = [i, i+width, i+width*2];
           let firstColor = tiles[i].style.backgroundColor;
           if (firstColor && match.every(idx => tiles[idx].style.backgroundColor === firstColor)) {
-            match.forEach(idx => {
-              tiles[idx].classList.add("match");
-              tiles[idx].style.backgroundColor = "";
-            });
+            match.forEach(idx => tiles[idx].style.backgroundColor = "");
             score += 10;
             matchFound = true;
           }
         }
       }
 
-      if (matchFound) {
-        scoreDisplay.textContent = `Score: ${score}`;
-      }
+      if (matchFound) scoreDisplay.textContent = `Score: ${score}`;
     }
 
     function moveDown() {
-      for (let i = width * (width - 1) - 1; i >= 0; i--) {
-        if (tiles[i].style.backgroundColor === "") {
-          tiles[i].style.backgroundColor = tiles[i + width].style.backgroundColor;
-          tiles[i + width].style.backgroundColor = "";
+      for (let i = width * (width - 2); i >= 0; i--) {
+        if (tiles[i].style.backgroundColor && tiles[i + width].style.backgroundColor === "") {
+          tiles[i + width].style.backgroundColor = tiles[i].style.backgroundColor;
+          tiles[i].style.backgroundColor = "";
         }
       }
       for (let i = 0; i < width; i++) {
