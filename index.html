@@ -3,215 +3,209 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Tile Match 3 RPG</title>
+  <title>Tile Match RPG</title>
   <style>
     body {
       margin: 0;
       font-family: sans-serif;
-      background-color: #1e1e2f;
+      background: #222;
       color: white;
-      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
-    h1 {
-      margin-top: 20px;
+    #game-container {
+      width: 480px;
+      position: relative;
     }
-    #score {
-      margin: 10px 0;
+    .background {
+      height: 100px;
+      background: url('background.jpg') center/cover no-repeat;
     }
-    #gameBoard {
+    .monster {
+      display: flex;
+      justify-content: space-around;
+      padding: 10px 0;
+    }
+    .characters {
+      display: flex;
+      justify-content: space-around;
+      padding: 10px 0;
+    }
+    #grid {
       display: grid;
-      grid-template-columns: repeat(8, 50px);
+      grid-template-columns: repeat(8, 1fr);
+      grid-template-rows: repeat(6, 1fr);
       gap: 2px;
-      justify-content: center;
+      width: 100%;
+      background: #333;
     }
     .tile {
-      width: 50px;
-      height: 50px;
-      border-radius: 4px;
-      background-color: gray;
+      width: 100%;
+      padding-bottom: 100%;
+      position: relative;
+      cursor: pointer;
     }
-    .match {
-      animation: pop 0.3s ease forwards;
+    .tile img {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      top: 0;
+      left: 0;
     }
-    @keyframes pop {
-      0% { transform: scale(1); }
-      50% { transform: scale(1.2); }
-      100% { transform: scale(0); }
+    .scoreboard {
+      margin: 10px;
     }
   </style>
 </head>
 <body>
-  <h1>Tile Match 3 RPG</h1>
-  <div id="score">Score: 0</div>
-  <div id="gameBoard"></div>
+  <div id="game-container">
+    <div class="background"></div>
+    <div class="monster">
+      <img src="monster.png" alt="Monster" width="80" height="80" />
+    </div>
+    <div class="characters">
+      <img src="char_red.png" width="50" height="50" />
+      <img src="char_blue.png" width="50" height="50" />
+      <img src="char_green.png" width="50" height="50" />
+      <img src="char_yellow.png" width="50" height="50" />
+      <img src="char_purple.png" width="50" height="50" />
+    </div>
+    <div id="grid"></div>
+    <div class="scoreboard">Score: <span id="score">0</span></div>
+  </div>
 
   <script>
+    const grid = document.getElementById('grid');
+    const scoreDisplay = document.getElementById('score');
     const width = 8;
-    const tileColors = ["red", "blue", "green", "yellow", "purple"];
-    let board = [];
+    const height = 6;
+    const tileColors = ['red', 'blue', 'green', 'yellow', 'purple'];
+    const colorToChar = {
+      red: ['char_red.png'],
+      blue: ['char_blue.png'],
+      green: ['char_green.png'],
+      yellow: ['char_yellow.png'],
+      purple: ['char_purple.png']
+    };
     let score = 0;
-    let draggedTile = null;
-    let draggedIndex = null;
-    const boardEl = document.getElementById("gameBoard");
-    const scoreEl = document.getElementById("score");
 
-    function randomColor() {
-      return tileColors[Math.floor(Math.random() * tileColors.length)];
+    function createBoard() {
+      for (let i = 0; i < width * height; i++) {
+        const tile = document.createElement('div');
+        tile.classList.add('tile');
+        const img = document.createElement('img');
+        const color = tileColors[Math.floor(Math.random() * tileColors.length)];
+        img.src = `tiles/${color}.png`;
+        img.dataset.color = color;
+        tile.appendChild(img);
+        tile.dataset.index = i;
+        tile.addEventListener('click', () => selectTile(i));
+        grid.appendChild(tile);
+      }
     }
 
-    function createTile(index, color) {
-      const tile = document.createElement("div");
-      tile.classList.add("tile");
-      tile.dataset.index = index;
-      tile.style.backgroundColor = color;
-      tile.setAttribute("draggable", true);
-
-      tile.addEventListener("dragstart", (e) => {
-        draggedTile = tile;
-        draggedIndex = index;
-      });
-
-      tile.addEventListener("dragover", (e) => e.preventDefault());
-
-      tile.addEventListener("drop", () => {
-        const targetIndex = parseInt(tile.dataset.index);
-        const validMoves = [
-          draggedIndex - 1,
-          draggedIndex + 1,
-          draggedIndex - width,
-          draggedIndex + width,
-        ];
-        if (!validMoves.includes(targetIndex)) return;
-
-        // Swap and test
-        swapTiles(draggedIndex, targetIndex);
-        const matches = findMatches();
-        if (matches.length > 0) {
-          // valid swap
-          draggedTile = null;
-          draggedIndex = null;
-        } else {
-          // revert
-          swapTiles(draggedIndex, targetIndex);
-        }
-      });
-
-      return tile;
-    }
-
-    function initializeBoard() {
-      do {
-        board = [];
-        boardEl.innerHTML = "";
-        for (let i = 0; i < width * width; i++) {
-          let color;
-          do {
-            color = randomColor();
-          } while (wouldFormMatch(i, color));
-          const tile = createTile(i, color);
-          board.push(tile);
-          boardEl.appendChild(tile);
-        }
-      } while (findMatches().length > 0);
-    }
-
-    function getTile(index) {
-      return board[index];
+    let selected = null;
+    function selectTile(index) {
+      if (selected === null) {
+        selected = index;
+      } else {
+        swapTiles(selected, index);
+        selected = null;
+      }
     }
 
     function swapTiles(i1, i2) {
-      const tempColor = getTile(i1).style.backgroundColor;
-      getTile(i1).style.backgroundColor = getTile(i2).style.backgroundColor;
-      getTile(i2).style.backgroundColor = tempColor;
-    }
+      const tile1 = grid.children[i1].querySelector('img');
+      const tile2 = grid.children[i2].querySelector('img');
 
-    function wouldFormMatch(index, color) {
-      const row = Math.floor(index / width);
-      const col = index % width;
-      if (col >= 2 &&
-          board[index - 1]?.style.backgroundColor === color &&
-          board[index - 2]?.style.backgroundColor === color) return true;
-      if (row >= 2 &&
-          board[index - width]?.style.backgroundColor === color &&
-          board[index - width * 2]?.style.backgroundColor === color) return true;
-      return false;
-    }
+      if (!areAdjacent(i1, i2)) return;
 
-    function findMatches() {
-      const matches = [];
-      for (let i = 0; i < board.length; i++) {
-        const color = board[i].style.backgroundColor;
-        if (!color) continue;
-        if (i % width < width - 2) {
-          if (
-            color === board[i+1].style.backgroundColor &&
-            color === board[i+2].style.backgroundColor
-          ) {
-            matches.push(i, i+1, i+2);
-          }
-        }
-        if (i < width * (width - 2)) {
-          if (
-            color === board[i+width].style.backgroundColor &&
-            color === board[i+width*2].style.backgroundColor
-          ) {
-            matches.push(i, i+width, i+width*2);
-          }
-        }
-      }
-      return [...new Set(matches)];
-    }
+      [tile1.src, tile2.src] = [tile2.src, tile1.src];
+      [tile1.dataset.color, tile2.dataset.color] = [tile2.dataset.color, tile1.dataset.color];
 
-    function removeMatches(matches) {
-      matches.forEach(i => {
-        board[i].classList.add("match");
-        board[i].style.backgroundColor = "";
-      });
-      score += matches.length * 10;
-      scoreEl.textContent = `Score: ${score}`;
-    }
-
-    function collapseBoard() {
-      for (let col = 0; col < width; col++) {
-        for (let row = width - 1; row >= 0; row--) {
-          let i = row * width + col;
-          if (board[i].style.backgroundColor === "") {
-            let aboveRow = row - 1;
-            while (aboveRow >= 0) {
-              let aboveIndex = aboveRow * width + col;
-              if (board[aboveIndex].style.backgroundColor !== "") {
-                board[i].style.backgroundColor = board[aboveIndex].style.backgroundColor;
-                board[aboveIndex].style.backgroundColor = "";
-                break;
-              }
-              aboveRow--;
-            }
-          }
-        }
-      }
-    }
-
-    function fillEmptyTiles() {
-      for (let i = 0; i < board.length; i++) {
-        if (board[i].style.backgroundColor === "") {
-          board[i].style.backgroundColor = randomColor();
-        }
-      }
-    }
-
-    function gameTick() {
-      const matches = findMatches();
-      if (matches.length > 0) {
-        removeMatches(matches);
+      if (!checkMatches()) {
+        // swap back if no match
         setTimeout(() => {
-          collapseBoard();
-          fillEmptyTiles();
+          [tile1.src, tile2.src] = [tile2.src, tile1.src];
+          [tile1.dataset.color, tile2.dataset.color] = [tile2.dataset.color, tile1.dataset.color];
         }, 200);
-      }
+      }\    }
+
+    function areAdjacent(i1, i2) {
+      const dx = Math.abs((i1 % width) - (i2 % width));
+      const dy = Math.abs(Math.floor(i1 / width) - Math.floor(i2 / width));
+      return dx + dy === 1;
     }
 
-    setInterval(gameTick, 400);
-    initializeBoard();
+    function checkMatches() {
+      let foundMatch = false;
+      const matched = new Set();
+
+      // horizontal
+      for (let row = 0; row < height; row++) {
+        for (let col = 0; col < width - 2; col++) {
+          const idx = row * width + col;
+          const color = grid.children[idx].querySelector('img').dataset.color;
+          if (
+            color &&
+            grid.children[idx + 1].querySelector('img').dataset.color === color &&
+            grid.children[idx + 2].querySelector('img').dataset.color === color
+          ) {
+            matched.add(idx);
+            matched.add(idx + 1);
+            matched.add(idx + 2);
+            foundMatch = true;
+            damageMonster(color);
+          }
+        }
+      }
+
+      // vertical
+      for (let col = 0; col < width; col++) {
+        for (let row = 0; row < height - 2; row++) {
+          const idx = row * width + col;
+          const color = grid.children[idx].querySelector('img').dataset.color;
+          if (
+            color &&
+            grid.children[idx + width].querySelector('img').dataset.color === color &&
+            grid.children[idx + width * 2].querySelector('img').dataset.color === color
+          ) {
+            matched.add(idx);
+            matched.add(idx + width);
+            matched.add(idx + width * 2);
+            foundMatch = true;
+            damageMonster(color);
+          }
+        }
+      }
+
+      matched.forEach(i => {
+        const img = grid.children[i].querySelector('img');
+        img.style.transition = 'opacity 0.5s';
+        img.style.opacity = 0;
+        setTimeout(() => {
+          const newColor = tileColors[Math.floor(Math.random() * tileColors.length)];
+          img.src = `tiles/${newColor}.png`;
+          img.dataset.color = newColor;
+          img.style.opacity = 1;
+        }, 500);
+      });
+
+      if (matched.size > 0) {
+        score += matched.size * 10;
+        scoreDisplay.textContent = score;
+      }
+
+      return foundMatch;
+    }
+
+    function damageMonster(color) {
+      console.log(`${color} character(s) deal damage to the monster!`);
+      // Placeholder: you could reduce monster HP, animate monster, etc.
+    }
+
+    createBoard();
   </script>
 </body>
 </html>
