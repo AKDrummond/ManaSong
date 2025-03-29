@@ -65,18 +65,22 @@
         board.appendChild(tile);
         tiles.push(tile);
       }
+
+      addDragListeners();
+    }
+
+    function addDragListeners() {
+      tiles.forEach(tile => {
+        tile.addEventListener('dragstart', dragStart);
+        tile.addEventListener('dragover', e => e.preventDefault());
+        tile.addEventListener('drop', dragDrop);
+        tile.addEventListener('dragend', dragEnd);
+      });
     }
 
     let colorBeingDragged, colorBeingReplaced, tileIdBeingDragged, tileIdBeingReplaced;
 
-    tiles.forEach(tile => {
-      tile.addEventListener('dragstart', dragStart);
-      tile.addEventListener('dragover', e => e.preventDefault());
-      tile.addEventListener('drop', dragDrop);
-      tile.addEventListener('dragend', dragEnd);
-    });
-
-    function dragStart(e) {
+    function dragStart() {
       colorBeingDragged = this.style.backgroundColor;
       tileIdBeingDragged = parseInt(this.id);
     }
@@ -106,33 +110,41 @@
     }
 
     function checkMatches() {
+      let matchFound = false;
+
       for (let i = 0; i < width * width; i++) {
-        let row = Math.floor(i / width);
+        // Horizontal match
         if (i % width < width - 2) {
           let match = [i, i+1, i+2];
           let firstColor = tiles[i].style.backgroundColor;
-          if (match.every(idx => tiles[idx].style.backgroundColor === firstColor)) {
+          if (firstColor && match.every(idx => tiles[idx].style.backgroundColor === firstColor)) {
             match.forEach(idx => {
               tiles[idx].classList.add("match");
-              setTimeout(() => tiles[idx].style.backgroundColor = "", 300);
-              score += 10;
+              tiles[idx].style.backgroundColor = "";
             });
+            score += 10;
+            matchFound = true;
           }
         }
 
+        // Vertical match
         if (i < width * (width - 2)) {
           let match = [i, i+width, i+width*2];
           let firstColor = tiles[i].style.backgroundColor;
-          if (match.every(idx => tiles[idx].style.backgroundColor === firstColor)) {
+          if (firstColor && match.every(idx => tiles[idx].style.backgroundColor === firstColor)) {
             match.forEach(idx => {
               tiles[idx].classList.add("match");
-              setTimeout(() => tiles[idx].style.backgroundColor = "", 300);
-              score += 10;
+              tiles[idx].style.backgroundColor = "";
             });
+            score += 10;
+            matchFound = true;
           }
         }
       }
-      scoreDisplay.textContent = `Score: ${score}`;
+
+      if (matchFound) {
+        scoreDisplay.textContent = `Score: ${score}`;
+      }
     }
 
     function moveDown() {
@@ -149,10 +161,10 @@
       }
     }
 
-    window.setInterval(() => {
+    setInterval(() => {
       checkMatches();
       moveDown();
-    }, 300);
+    }, 500);
 
     createBoard();
   </script>
